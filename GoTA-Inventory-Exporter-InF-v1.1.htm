@@ -1,0 +1,1885 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>GoTA Inventory Exporter</title>
+    <script type="text/javascript"src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.23.2/js/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.23.2/js/widgets/widget-filter.min.js"></script>
+    
+
+    <style type="text/css">
+        /*used by tablesorter to hide filtered out rows*/
+        .tablesorter .filtered {
+            display: none;
+        }
+
+        /* filters */
+        .tablesorter-filter {
+              width: 100%;
+              height: inherit;
+              margin: 1px;
+              padding: 1px;
+              background-color: #fff;
+              border: 1px solid #bbb;
+              color: #333;
+              -webkit-box-sizing: border-box;
+              -moz-box-sizing: border-box;
+              box-sizing: border-box;
+              -webkit-transition: height 0.1s ease;
+              -moz-transition: height 0.1s ease;
+              -o-transition: height 0.1s ease;
+              transition: height 0.1s ease;
+        }
+
+        th.tablesorter-headerAsc div {
+            background: url("https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.23.2/css/images/metro-black-asc.png") right center no-repeat;
+            padding-right: 15px;
+        }
+        
+        th.tablesorter-headerDesc div {
+            background: url("https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.23.2/css/images/metro-black-desc.png") right center no-repeat;
+            padding-right: 15px;
+        }
+        
+        .tablesorter .tablesorter-filter-row .disabled {
+            display: none;
+        }
+        
+        body {
+            padding: 20px;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+            font-size: 14px;       
+        }
+
+        .tabs-menu {
+            height: 30px;
+            float: left;
+            clear: both;
+            padding-left:20px;
+        }
+
+        .tabs-menu li {
+            height: 30px;
+            line-height: 30px;
+            float: left;
+            margin-right: 6px;
+            background-color: #ccc;
+            border-top: 1px solid #d4d4d1;
+            border-right: 1px solid #d4d4d1;
+            border-left: 1px solid #d4d4d1;
+        }
+
+        .tabs-menu li.current {
+            position: relative;
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            z-index: 5;
+        }
+
+        .tabs-menu li a {
+            padding: 10px;
+            text-transform: uppercase;
+            color: #000;
+            text-decoration: none; 
+        }
+
+        .tabs-menu .current a {
+            color: #2e7da3;
+        }
+
+        .tab {
+            border: 1px solid #d4d4d1;
+            background-color: #fff;
+            float: left;
+            margin-bottom: 20px;
+            width: auto;
+        }
+
+        .tab-content {
+            width: 96%;
+            padding: 20px;
+            display: none;
+        }
+
+        #divTabsContainer li
+        {
+            list-style-type: none;
+        }
+
+        #tabSummary {
+         display: block;   
+        }
+        
+        table,td,th 
+        {
+            font:13px/18px verdana,arial,sans-serif;
+            border:1px solid #ddd;
+            border-collapse:collapse
+        }
+        
+        th
+        {
+            background-color:#e2e4ff;font-weight:bold
+        }
+    </style>
+</head>
+<body bgcolor="#E3E3E3">
+    <h2>GoTA Inventory Exporter InF edition v1.1</h2>
+    <div id="divInputPanel">
+        <p><b>1. Go to <a href ="http://gota-www.disruptorbeam.com/play/player_data/" target="_blank">http://gota-www.disruptorbeam.com/play/player_data/</a><br />
+        2. Copy the data (ctrl+A, ctrl+C) and paste it in to the Player Data textbox. (This will take several seconds.)<br />
+        3. Click the Generate button to create tables displaying your current GoTA SS and inventory contents.<br />
+        4. Click on any table header to sort by that column (hold Shift to sort by multiple columns) OR copy and paste the tables to Excel/Google Sheets for better sorting options.</b></p>
+        <p><b>Note: This page runs vastly faster in Firefox.  Generating in Chrome or IE will take several seconds to a minute depending on inventory size.  <br />
+        The browser may warn the page is unresponsive, but let it continue, it is still running.</b></p>
+        <p><b>Player Data</b></p>
+	    <textarea id="txfInput" rows="10" cols="150"></textarea><br />
+        <p><b>Alliance Camps (Used to fill camp garrison max)</b></p>
+	    <textarea id="txfAllianceInput" rows="4" cols="150" disabled=true></textarea><br />
+        <button id="btnGenerate" style="font-size:20px">Generate</button><label id="lblComplete"></label>
+    </div>
+    <button id="btnShowInput" style="font-weight:bold;">Open Input Panel</button>
+    <br /><br />
+    <div id="divDetailFilterPanel" style="display:inline-block; background-color: #fff; width: 500px;">
+        <label style='display:block; background-color:#e2e4ff; font-weight:bold; width:100%;'>Filter Lists By Keywords</label>
+        <div style="display:inline-block; width: 49%; background-color: #fff;">
+            <br/>Filter By: <select id='ddlDetailFilter1'></select></br>
+            And/Or: <select id='ddlDetailFilterAndOr'><option value='AND'>And</option><option value='OR'>Or</option></select><br/>
+            Then By: <select id='ddlDetailFilter2'></select><br/><br/>
+            <button id='btnFilterByDetails' style='font-weight:bold;'>Apply Filters</button><button id='btnClearFilterByDetails' style='font-weight:bold;'>Clear Filters</button>
+        </div>
+        <div id="divFilterSummary" style="display:inline-block; width: 49%; background-color: #fff;"></div>
+    </div>
+    <div id="divUtilityPanel" style="margin-left: 20px; display:inline-block; vertical-align: top; background-color: #fff; width: 400px;">
+        <label style='display:block; background-color:#e2e4ff; font-weight:bold; width:100%;'>Additional Options</label>
+        <input type="checkbox" id="chkShowItemIds" /> Show Item ID columns <br />
+        <input type="checkbox" id="chkShowNumericalRarity" /> Show Item Rarity Numerically (1-5)
+    </div>
+    <div id="divTabsContainer" style="min-width: 1300px;">
+        <ul class="tabs-menu">
+            <li class="current"><a href="#tabSummary">Summary</a></li>
+            <li><a href="#tabSSStatus">Sworn Sword Status</a></li>
+            <li><a href="#tabSSDetails">Sworn Sword Details</a></li>
+            <li><a href="#tabWeapons">Weapons</a></li>
+            <li><a href="#tabArmor">Armor</a></li>
+            <li><a href="#tabUnits">Units</a></li>
+            <li><a href="#tabSeals">Seals</a></li>
+            <li><a href="#tabBoons">Boons</a></li>
+            <li><a href="#tabResources">Resources</a></li>
+            <li><a href="#tabCamp">Camp Materials</a></li>
+            <li><a href="#tabBloat">Bloat</a></li>
+        </ul>
+		<br>
+        <div class="tab">
+            <div id="tabSummary" class="tab-content">
+                <div style="width: 100%;">
+                    <div style="float: left; width: 48%; margin:1%;">
+                        <h3 id="hdrName"></h3>
+                        <label id="lblCurrentCommand"></label> / <label id="lblCommand"></label> CP<br />
+                        Number of AvA Actions This Life: <label id="lblAvaActionCount"></label><br />
+                        Days Played: <label id="lblDaysPlayed"></label><br />
+                        Silver: <label id="lblSilver"></label><br />
+						Prestige: <label id="lblPrestige"></label><br />
+                        Silver Value of Unequipped Items: <label id="lblUnequippedSilver"></label>
+                        <br />
+                        <br />
+                        <h4>SS Breakdown:</h4>
+                        <div id="divSSSpecialtiesTable"></div>
+                        <br />
+                        <br />
+                        <div id="divSSRaritiesTable"></div>
+                    </div>
+                    <div style="float: right; width: 48%; margin:1%;">
+                        <h4>Garrison Breakdown:</h4>
+                        <div id="divGarrisonSummaryTable"></div>
+                    </div>
+                    <br style="clear: left;" />
+                </div>
+            </div>
+            <div id="tabSSStatus" class="tab-content">
+                <div id="divSwornSwordStatusTable"></div>
+            </div>
+            <div id="tabSSDetails" class="tab-content">
+                <div id="divSwornSwordDetailTable"></div>
+            </div>
+            <div id="tabWeapons" class="tab-content">
+                <div id="divWeaponTable"></div>
+            </div>
+            <div id="tabArmor" class="tab-content">
+                <div id="divArmorTable"></div>
+            </div>
+            <div id="tabUnits" class="tab-content">
+                <div id="divUnitTable"></div>
+            </div>
+            <div id="tabSeals" class="tab-content">
+                <div id="divSealTable"></div>
+            </div>
+            <div id="tabBoons" class="tab-content">
+                <div id="divBoonTable"></div>
+            </div>
+            <div id="tabResources" class="tab-content">
+                <div id="divResourceTable"></div>
+            </div>
+            <div id="tabCamp" class="tab-content">
+                <table>
+                    <thead>
+                        <tr><th>Resources</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr style="vertical-align: top;">
+		                <td style="padding: 10px; white-space: nowrap;"><div id="divBattleCampMaterialTableLabel" style="display:table-cell"></div><div id="divBattleCampMaterialTableQuantity" style="display:table-cell"></div></td>
+		            </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="tabBloat" class="tab-content">
+                <label style='display:block; font-weight:bold;'>Removal Candidates:</label>
+                <div id="divBloatRemovalCandidatesTable"></div>
+                <br />
+                <br />
+                <label style='display:block; font-weight:bold;'>Replacement List:</label>
+                <div id="divBloatReplacementsTable"></div>
+                <br />
+                <label style='font-weight:bold;'>Size of Possible Inventory Reduction: </label><label id="lblBloatItemRemovalCount"></label><br />
+                <label style='font-weight:bold;'>Size of Possible Inventory Page Reduction: </label><label id="lblBloatPageRemovalCount"></label>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        //TODO: Find new table sorting library to improve performance.  Most of the delay is adding the sorting/filtering to tables.
+
+        $(document).ready(function () {
+            $('#divTabsContainer').hide();
+            $('#divDetailFilterPanel').hide();
+            $('#divUtilityPanel').hide();
+            $('#btnShowInput').hide();
+
+            //Panel toggle for the input fields
+            $('#btnShowInput').click(function () {
+                $('#divInputPanel').show();
+                $('#btnShowInput').hide();
+            });
+
+            //ID checkbox handler
+            $("#chkShowItemIds").on("click", function () {
+                $(".itemIdColumn").toggle();
+            });
+
+            //Numerical rarity checkbox handler
+            $("#chkShowNumericalRarity").on("click", function () {
+                createStatusTable();
+                createInventoryTables();
+                createBloatTables();
+            });
+
+            //Tabbing
+            $(".tabs-menu a").click(function (event) {
+                event.preventDefault();
+                $(this).parent().addClass("current");
+                $(this).parent().siblings().removeClass("current");
+                var tab = $(this).attr("href");
+                $(".tab-content").not(tab).css("display", "none");
+                $(tab).fadeIn();
+            });
+
+            $("#btnFilterByDetails").click(function () {
+                filterListsByDetails();
+            });
+
+            $("#btnClearFilterByDetails").click(function () {
+                $('#ddlDetailFilter1').val("NONE");
+                $('#ddlDetailFilter2').val("NONE");
+                $('#ddlDetailFilterAndOr').val("AND");
+                filterListsByDetails();
+            });
+
+            /**
+            * Click handler for Generate button
+            * Populates the characterInventory collection with Items from the input textarea contents since we cannot call player_data directly
+            */
+            $("#btnGenerate").click(function () {
+                
+                //Populate alliance camp info
+                var jsonp = $('#txfAllianceInput').val();
+                jsonp = "[" + jsonp + "]";
+                var obj = $.parseJSON(jsonp);
+
+                $.each(obj, function () {
+                    if (typeof this.camps != 'undefined') {
+                        for (var i = 0; i < this.camps.length; i++) {
+                            characterInventory.regions[this.camps[i].region].subregions[this.camps[i].subregion].maxGarrisonCount = campGarrisonReference[this.camps[i].working_level];
+
+                            if (this.camps[i].working_level != this.camps[i].level) {
+                                characterInventory.regions[this.camps[i].region].subregions[this.camps[i].subregion].upgrading = 1;
+                            }
+                        }
+                    }
+                });
+
+
+                //Player inventory
+
+                jsonp = $('#txfInput').val();
+                jsonp = "[" + jsonp + "]";
+                obj = $.parseJSON(jsonp);
+
+                //clear any contents from a prior run
+                clearInventory();
+
+                var sellableItemCount = 0;
+                var salePage = 0;
+                var page = 0;
+
+                //For each DB item, create a new Item and add it to the appropriate collection
+                $.each(obj, function () {
+                    for (var i = 0; i < this.inventory.length; i++) {
+                        if (this.inventory[i].slot == "Character") {
+                            //Store the character ids for later use
+                            characterInventory.characterItemId = this.inventory[i].id;
+                            characterInventory.characterWeaponId = this.inventory[i].hand_item_id;
+                            characterInventory.characterArmorId = this.inventory[i].body_item_id;
+                            characterInventory.characterUnitId = this.inventory[i].companion_item_id;
+                        }
+                        else if (this.inventory[i].slot == "Sworn Sword") {
+                            page = (Math.floor(characterInventory.swornSwords.length / 5) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.swornSwords.push(new SwornSword(this.inventory[i], page, salePage));
+                        }
+                        else if (this.inventory[i].slot == "Weapon") {
+                            page = (Math.floor((characterInventory.weapons.length + characterInventory.armor.length) / 6) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.weapons.push(new Equipment(this.inventory[i], page, salePage));
+                        }
+                        else if (this.inventory[i].slot == "Armor") {
+                            page = (Math.floor((characterInventory.weapons.length + characterInventory.armor.length) / 6) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.armor.push(new Equipment(this.inventory[i], page, salePage));
+                        }
+                        else if (this.inventory[i].slot == "Companion" || this.inventory[i].slot == "Unit") {
+                            page = (Math.floor(characterInventory.units.length / 6) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.units.push(new Equipment(this.inventory[i], page, salePage));
+                        }
+                        else if (this.inventory[i].slot == "Seal") {
+                            page = (Math.floor((characterInventory.seals.length) / 6) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.seals.push(new Item(this.inventory[i], page, salePage));
+                        }
+                        else if (this.inventory[i].slot == "Treasure") {
+                            page = (Math.floor(characterInventory.resources.length / 6) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.resources.push(new Item(this.inventory[i], page, salePage));
+                        }
+                        else if (this.inventory[i].slot == "Boon") {
+                            page = (Math.floor(characterInventory.boons.length / 6) + 1);
+
+                            if (isDBItemSellable(this.inventory[i])) {
+                                sellableItemCount++;
+                                salePage = (Math.floor(sellableItemCount / 6) + 1)
+                            }
+                            else
+                                salePage = 0;
+
+                            characterInventory.boons.push(new Item(this.inventory[i], page, salePage));
+                        }
+                    }
+					characterInventory.campMaterials.silverCount = this.user.money;
+					characterInventory.campMaterials.prestigeCount = this.user.prestige;
+
+                    //Fill general player info
+                    $('#hdrName').text(this.character.name);
+                    $('#lblAvaActionCount').text(this.stat.num_ava_actions);
+                    $('#lblDaysPlayed').text(Math.floor(this.age_days));
+                    $('#lblCurrentCommand').text(this.stat.current_command);
+                    $('#lblCommand').text(this.stat.command);
+                    $('#lblSilver').text(this.user.money);
+					$('#lblPrestige').text(this.user.prestige);
+                    $('#lblUnequippedSilver').text(getUnequippedSilverTotal());
+                });
+
+                //show filter panel
+                fillDetailFilterPanel();
+                $('#divDetailFilterPanel').show();
+
+                //show util panel
+                $('#divUtilityPanel').show();
+
+                //Fill filtered lists, the ones that go to display
+                filterListsByDetails();
+
+                //Create the sortable inventory tables
+                fillEquippedOnInfo();
+                createStatusTable();
+                createInventoryTables();
+
+                //Create the camp material tables
+                fillCampMaterials();
+                $('#divBattleCampMaterialTableLabel').html(buildCampMaterialLabelTable('tblBattleMaterialsLabel', characterInventory.campMaterials));
+                $('#divBattleCampMaterialTableQuantity').html(buildCampMaterialQuantityTable('tblBattleMaterialsQuantity', characterInventory.campMaterials));
+
+                //Create the garrison summary
+                fillGarrisonCounts();
+                $('#divGarrisonSummaryTable').html(buildGarrisonSummaryTable('tblGarrisonSummary', characterInventory.regions));
+
+                //Create the SS summaries
+                $('#divSSSpecialtiesTable').html(buildSSSpecialtiesTable);
+                $('#divSSRaritiesTable').html(buildSSRaritiesTable());
+
+                //Create the inventroy bloat tab
+                fillInventoryBloatData();
+                createBloatTables();
+
+                $('#lblBloatItemRemovalCount').text((characterInventory.bloatItemRemovalCount - characterInventory.bloatReplacements.length) + " items");
+                $('#lblBloatPageRemovalCount').text(Math.floor((characterInventory.bloatItemRemovalCount - characterInventory.bloatReplacements.length) / 6) + " pages");
+
+                //Show the tab contents
+                $('#divTabsContainer').show();
+
+                //Clear the boxes so they dont interfere with text searching
+                $('#txfAllianceInput').val("");
+                $('#txfInput').val("");
+
+                //Hide the input panel and show the input expand button
+                $('#divInputPanel').hide();
+                $('#btnShowInput').show();
+            });
+        });
+
+        //An Item class
+        function Item(DBItem, page, salePage) {
+            if (arguments.length > 0) {
+                this.init(DBItem, page, salePage);
+            }
+        }
+
+        Item.prototype.init = function (DBItem, page, salePage) {
+            this.id = DBItem.id;
+            this.archetypeId = DBItem.archetype_id;
+            this.name = DBItem.full_name;
+            this.battle = DBItem.calc_battle;
+            this.trade = DBItem.calc_trade;
+            this.intrigue = DBItem.calc_intrigue;
+            this.rarity = DBItem.rarity;
+            this.quantity = DBItem.quantity;
+            this.saleValue = Math.floor(DBItem.price * .2); //Items sell for 20%
+            this.permanent = DBItem.permanent_item;
+            this.page = page;
+            this.salePage = salePage;
+            this.archetypeName = DBItem.symbol;
+
+            fillDetails(this, DBItem);
+        }
+
+        //An Equipment class
+        Equipment.prototype = new Item();
+        Equipment.prototype.constructor = Equipment;
+        Equipment.superclass = Item.prototype;
+
+        function Equipment(DBItem, page, salePage) {
+            if (arguments.length > 0) {
+                this.init(DBItem, page, salePage);
+            }
+       }
+
+       Equipment.prototype.init = function (DBItem, page, salePage) {
+           Equipment.superclass.init.call(this, DBItem, page, salePage);
+
+           this.slot = DBItem.slot;
+           this.equippedQuantity = DBItem.equipped_quantity;
+
+           this.equippedOnId = -1;
+
+           fillSealData(this, DBItem);
+       }
+
+       //A SwornSword class
+       SwornSword.prototype = new Item();
+       SwornSword.prototype.constructor = SwornSword;
+       SwornSword.superclass = Item.prototype;
+
+       function SwornSword(DBItem, page, salePage) {
+            if (arguments.length > 0) {
+                this.init(DBItem, page, salePage);
+            }
+        }
+
+        SwornSword.prototype.init = function (DBItem, page, salePage) {
+            SwornSword.superclass.init.call(this, DBItem, page, salePage);
+
+            this.weaponId = DBItem.hand_item_id;
+            this.armorId = DBItem.body_item_id;
+            this.unitId = DBItem.companion_item_id;
+
+            this.level = DBItem.upgrade_level;
+            this.specialty = capitalizeFirstLetter(DBItem.modifier);
+            this.wounds = DBItem.damage;
+            this.cooldown = DBItem.cooldown;
+
+            //There's some goofy cooldown values.  If it's longer than a 7 day patrol, will assume it's 0
+            if (this.cooldown > 604800) {
+                this.cooldown = 0;
+            }
+
+            if (typeof DBItem.garrison_region != 'undefined') {
+                this.garrisonRegionId = DBItem.garrison_region;
+                this.garrisonSubregionId = DBItem.garrison_subregion;
+            }
+            else {
+                this.garrisonRegionId = -1;
+                this.garrisonSubregionId = -1;
+            }
+
+            this.status = getSSStatusString(DBItem, getGarrisonLocationString(this.garrisonRegionId, this.garrisonSubregionId));
+
+            fillSealData(this, DBItem);
+        }
+
+        function capitalizeFirstLetter(string) {
+            if (typeof string != 'undefined' && string.length > 0)
+                return string.charAt(0).toUpperCase() + string.substring(1);
+                
+            return string;
+        }
+
+        //Puts the seal data in the item fields
+        //TODO: Figure out what the seals are
+        function fillSealData(item, DBItem) {
+            item.seals = JSON.parse(DBItem.seal_slots);
+            item.sealSlotsMax = DBItem.num_seal_slots;
+            
+            var usedCount = 0;
+            var unlockedCount = 0;
+
+            for (var i = 0; i < item.seals.length; i++) {
+                if (item.seals[i] != null) {
+                    if (item.seals[i] != "")
+                        usedCount++;
+
+                    unlockedCount++;
+                }
+            }
+
+            item.sealSlotsUsed = usedCount;
+            item.sealSlotsUnlocked = unlockedCount;
+        }
+
+        //Fills the details field
+        //TODO: , split and regex parse so we can sort on these contents - Stalled due to DB's very inconsistent bonus wordings
+        function fillDetails(item, DBItem) {
+            //Replace the silver image with the word 'silver' since we don't have the image and it might get in the way of sorting later
+            item.details = DBItem.details.split('<img class="inline_silver" height="16" src="/images/icon-silver-sm.png">').join('silver');
+
+            //Remove the word "Permanent" from the list since there's already a perm column
+            item.details = item.details.split(',Permanent').join('');
+            item.details = item.details.split('Permanent').join('');
+
+            //Quick, ugly way to split on "," and avoid splitting on ", "
+            item.details = item.details.split(", ").join("\t");
+            item.details = item.details.split(",").join("\n");
+            item.details = item.details.split("\t").join(", ");
+            item.details = item.details.split("\n");
+        }
+
+        function isDBItemSellable(DBItem) {
+            if (DBItem.permanent_item == true || (typeof DBItem.price_perk_points != 'undefined' && DBItem.price_perk_points > 0))
+                return false;
+
+            return true;
+        }
+
+        //Camp garrison sizes by camp level lookup
+        //Because the working_level garrison size isn't in the json
+        var campGarrisonReference = [0, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 35, 40, 45, 50];
+
+        //Holds the Item inventory separated into sub arrays by item type (SS, Weapons, Armor, Units+Companions, etc)
+        var characterInventory = {
+            swornSwords: [],
+            weapons: [],
+            armor: [],
+            units: [],
+            seals: [],
+            resources: [],
+            boons: [],
+
+            //filtered lists
+            filteredSwornSwords: [],
+            filteredWeapons: [],
+            filteredArmor: [],
+            filteredUnits: [],
+            filteredSeals: [],
+            filteredResources: [],
+            filteredBoons: [],
+
+            //bloat lists
+            bloatRemovalCandidates: [],
+            bloatReplacements: [],
+            bloatItemRemovalCount: 0,
+
+            //The id for your character in the player_data, not your user id
+            characterItemId: -1,
+            characterWeaponId: -1,
+            characterArmorId: -1,
+            characterUnitId: -1,
+
+            //Ordered the same as on the camp mats tracking sheet
+            campMaterials: {
+				silverCount:0,
+				prestigeCount: 0,
+                battle: [
+				{ id: 335, name: "Broadsword", quantity: 0 },
+				{ id: 1425, name: "Hefty Broadsword", quantity: 0 }, 
+				{ id: 339, name: "Dagger", quantity: 0 },
+				{ id: 192, name: "Longsword", quantity: 0 },
+				{ id: 845, name: "Milita", quantity: 0 },
+				{ id: 413, name: "Doublet", quantity: 0 },
+				{ id: 415, name: "Jerkin", quantity: 0 },
+				{ id: 409, name: "Splint Mail", quantity: 0 },
+				{ id: 1444, name: "Masterwork Splint Mail", quantity: 0 },								
+				{ id: 1618, name: "Ladder", quantity: 0 },
+				{ id: 1621, name: "Ram", quantity: 0 },
+				{ id: 1624, name: "Siege Tower", quantity: 0 },
+				{ id: 848, name: "Archers", quantity: 0 },
+				{ id: 420, name: "Barred Helm", quantity: 0 },
+				{ id: 847, name: "Bowmen", quantity: 0 },
+				{ id: 347, name: "Composite Bow", quantity: 0 },
+				{ id: 418, name: "Half Helm", quantity: 0 },
+				{ id: 345, name: "Short Bow", quantity: 0 },
+				{ id: 1060, name: "Metal Shield", quantity: 0 },
+				{ id: 849, name: "Shield Bearers", quantity: 0 },
+				{ id: 899, name: "Wood Shield", quantity: 0 },
+				{ id: 352, name: "Dreamwine", quantity: 0 },  
+				{ id: 851, name: "Eavesdropper", quantity: 0 }, 
+				{ id: 1066, name: "Linen Clothing", quantity: 0 },  
+				{ id: 351, name: "Milk Of The Poppy", quantity: 0 },  
+				{ id: 358, name: "Blindeye", quantity: 0 },
+				{ id: 429, name: "Roughspun Cloak", quantity: 0 },
+		        { id: 853, name: "Saboteur", quantity: 0 },
+		        { id: 431, name: "Satin Cloak", quantity: 0 },
+				{ id: 1623, name: "Scorpion", quantity: 0 },
+		        { id: 1626, name: "Spitfire", quantity: 0 },
+				{ id: 1620, name: "Turtle", quantity: 0 },
+				{ id: 856, name: "Courtesan", quantity: 0 },
+				{ id: 362, name: "Fingerless Gloves", quantity: 0 },
+				{ id: 858, name: "Assassin", quantity: 0 },
+				{ id: 432, name: "Guards Uniform", quantity: 0 },
+				{ id: 1409, name: "Madam", quantity: 0 },
+				{ id: 2154, name: "Guild Assassin", quantity: 0 },
+				{ id: 194, name: "Leather Bound Book", quantity: 0 },
+				{ id: 860, name: "Merchant", quantity: 0 },
+				{ id: 448, name: "Silver Chain", quantity: 0 },
+				{ id: 859, name: "Trader", quantity: 0 },
+				{ id: 455, name: "Gold Necklace", quantity: 0 },
+				{ id: 1086, name: "Lockbox", quantity: 0 },
+				{ id: 1423, name: "Secure Lockbox", quantity: 0 },
+				{ id: 369, name: "Vellum Scroll", quantity: 0 },
+				{ id: 1622, name: "Catapult", quantity: 0 },
+				{ id: 1625, name: "Mangonel", quantity: 0 },
+				{ id: 1619, name: "Trebuchet", quantity: 0 },
+				{ id: 862, name: "Caravan", quantity: 0 },
+				{ id: 861, name: "Cart", quantity: 0 },
+				{ id: 368, name: "Parchment Scroll", quantity: 0 },
+				{ id: 121, name: "Wagon", quantity: 0 },				
+				{ id: 863, name: "Mercer", quantity: 0 },
+				{ id: 441, name: "Silver Torc", quantity: 0 },
+				{ id: 1458, name: "Master Mercer", quantity: 0 },
+				{ id: 380, name: "Gold ring", quantity: 0 },				
+				{ id: 904, name: "Common Blue Gem", quantity: 0 },
+			    { id: 4354, name: "Common Red Gem", quantity: 0 },   
+         
+               // ],
+             //   trade: [
+
+		    //      { id: 4354, name: "Common Red Gem", quantity: 0 },
+		  //        { id: 904, name: "Common Blue Gem", quantity: 0 },
+//
+            //    ],
+                //intrigue: [
+//
+		  //        { id: 4354, name: "Common Red Gem", quantity: 0 },
+		   //       { id: 904, name: "Common Blue Gem", quantity: 0 },
+		          
+                ]
+            },
+
+            //TODO: These are presently referenced by index, not by id
+            regions: [
+                { id: 0, name: "The North", subregions: [
+                    { id: 0, name: "The Neck", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "Torrhen's Square", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "White Knife", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                },
+                { id: 1, name: "Iron Islands", subregions: [
+                    { id: 0, name: "Ironman's Bay", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "Great Wyk", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Harlaw", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                },
+                { id: 2, name: "Westerlands", subregions: [
+                    { id: 0, name: "Golden Tooth", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "River Road", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Gold Road", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}] 
+                },
+                { id: 3, name: "Crownlands", subregions: [
+                    { id: 0, name: "Kingswood", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "Crackclaw Point", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Blackwater Bay", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                },
+                { id: 4, name: "Stormlands", subregions: [
+                    { id: 0, name: "Marches", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "Summerhall", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Cape Wrath", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                },
+                { id: 5, name: "Dorne", subregions: [
+                    { id: 0, name: "Deep Sands", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "Greenblood", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Red Mountains", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                },
+                { id: 6, name: "The Reach", subregions: [
+                    { id: 0, name: "Oldtown", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "The Mander", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Ocean Road", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                },
+                { id: 7, name: "Riverlands", subregions: [
+                    { id: 0, name: "Red Fork", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 1, name: "Blue Fork", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0},
+                    { id: 2, name: "Green Fork", garrisonCount: 0, maxGarrisonCount: 0, upgrading: 0}]
+                }
+            ]
+        };
+
+        //Fills the lists of inventory items that could be removed and replaced with common versions to decrease inventory size
+        //All nonperm items less than legendary with 2+ entries with the same archetypeid will get added
+        //This will unfortunately include the handful of useful rares too, like Drowned Men, Drummers, and Mummers.
+        function fillInventoryBloatData() {
+            var i = 0;
+            var j;
+            var index = -1;
+            var item;
+            var inventoryLists = [characterInventory.weapons, characterInventory.armor, characterInventory.units];
+            var candidateOutputList = [];
+
+            for (i = 0; i < inventoryLists.length; i++) {
+                for (j = 0; j < inventoryLists[i].length; j++) {
+                    item = inventoryLists[i][j];
+
+                    if (item.permanent == false && item.rarity < 4) {
+                        index = containsArchetypeId(characterInventory.bloatRemovalCandidates, item.archetypeId);
+
+                        if (index > -1) {
+                            characterInventory.bloatRemovalCandidates[index].items.push({ id: item.id, name: item.name, rarity: item.rarity, quantity: item.quantity, equippedQuantity: item.equippedQuantity });
+                            characterInventory.bloatRemovalCandidates[index].totalQuantity += item.quantity;
+                        }
+                        else {
+                            characterInventory.bloatRemovalCandidates.push(
+                                { archetypeId: item.archetypeId, archetypeName: item.archetypeName, items: [
+                                    { id: item.id, name: item.name, rarity: item.rarity, quantity: item.quantity, equippedQuantity: item.equippedQuantity}], totalQuantity: item.quantity
+                                });
+                        }
+                    }
+                }
+            }
+
+            for (i = 0; i < characterInventory.bloatRemovalCandidates.length; i++) {
+                item = characterInventory.bloatRemovalCandidates[i];
+
+                if (item.items.length > 1) {
+                    characterInventory.bloatReplacements.push({ archetypeId: item.archetypeId, archetypeName: item.archetypeName, quantity: item.totalQuantity });
+                    characterInventory.bloatItemRemovalCount += item.items.length;
+                    candidateOutputList.push(item);
+                }
+            }
+
+            characterInventory.bloatRemovalCandidates = candidateOutputList;
+        }
+
+        //Check if an archetypeId is in the given array and return that index
+        function containsArchetypeId(array, archetypeId) {
+            for (var i = 0; i < array.length; i++) {
+                if (array[i].archetypeId == archetypeId)
+                    return i;
+            }
+
+            return -1;
+        }
+
+        //Resets the inventory arrays
+        function clearInventory() {
+            characterInventory.characterItemId = -1,
+            characterInventory.characterWeaponId = -1,
+            characterInventory.characterArmorId = -1,
+            characterInventory.characterUnitId = -1,
+
+            characterInventory.swornSwords.length = 0;
+            characterInventory.weapons.length = 0;
+            characterInventory.armor.length = 0;
+            characterInventory.units.length = 0;
+            characterInventory.seals.length = 0;
+            characterInventory.resources.length = 0;
+            characterInventory.boons.length = 0;
+
+            characterInventory.filteredSwornSwords.length = 0;
+            characterInventory.filteredWeapons.length = 0;
+            characterInventory.filteredArmor.length = 0;
+            characterInventory.filteredUnits.length = 0;
+            characterInventory.filteredSeals.length = 0;
+            characterInventory.filteredResources.length = 0;
+            characterInventory.filteredBoons.length = 0;
+
+            characterInventory.bloatRemovalCandidates.length = 0;
+            characterInventory.bloatReplacements.length = 0;
+            characterInventory.bloatItemRemovalCount = 0;
+
+            //Camp materials and garrisons will be reset on computation
+        }
+
+        //Fills the equipped id for all the wearable items
+        function fillEquippedOnInfo() {
+            var item;
+
+            //Loop thru all the SS, only assign an ID if there is only 1 SS holding this item
+            $.each(characterInventory.swornSwords, function (i, swornSword) {
+                item = getItemById(characterInventory.weapons, swornSword.weaponId);
+                if (typeof item != 'undefined' && item.equippedQuantity == 1) {
+                    item.equippedOnId = swornSword.id;
+                }
+
+                item = getItemById(characterInventory.armor, swornSword.armorId);
+                if (typeof item != 'undefined' && item.equippedQuantity == 1) {
+                    item.equippedOnId = swornSword.id;
+                }
+
+                item = getItemById(characterInventory.units, swornSword.unitId);
+                if (typeof item != 'undefined' && item.equippedQuantity == 1) {
+                    item.equippedOnId = swornSword.id;
+                }
+            });
+
+            //Assign the items held by the character
+            item = getItemById(characterInventory.weapons, characterInventory.characterWeaponId);
+            if (typeof item != 'undefined' && item.equippedQuantity == 1) {
+                item.equippedOnId = characterInventory.characterItemId;
+            }
+
+            item = getItemById(characterInventory.armor, characterInventory.characterArmorId);
+            if (typeof item != 'undefined' && item.equippedQuantity == 1) {
+                item.equippedOnId = characterInventory.characterItemId;
+            }
+
+            item = getItemById(characterInventory.units, characterInventory.characterUnitId);
+            if (typeof item != 'undefined' && item.equippedQuantity == 1) {
+                item.equippedOnId = characterInventory.characterItemId;
+            }
+        }
+
+        //Gets the Item matching the given id
+        function getItemById(array, id) {
+            if (typeof id == 'undefined' || id == -1)
+                return undefined;
+            
+            for (var i = 0; i < array.length; i++) {
+                if (array[i].id == id) {
+                    return array[i];
+                }
+            }
+
+            return undefined;
+        }
+
+        //Gets a string of form "Region - Subregion" for the given ids
+        function getGarrisonLocationString(regionId, subregionId) {
+            if (regionId > -1 && subregionId > -1)
+                return characterInventory.regions[regionId].name + " - " + characterInventory.regions[regionId].subregions[subregionId].name;
+            else 
+                return "";
+        }
+
+        //Creates an SS status string based on DB's flags
+        function getSSStatusString(DBSSobject, garrisonLocation) {
+            var status = "";
+
+            if (DBSSobject.damage >= 5) {
+                //Usually the location of death is still set (when type=7 maybe?)
+                if (garrisonLocation != "")
+                    return "Dead.  Killed in " + garrisonLocation;
+                else
+                    return "Dead";
+            }
+
+            if (typeof DBSSobject.cooldown != 'undefined' && DBSSobject.cooldown > 0) {
+                switch (DBSSobject.cooldown_type) {
+                    case 1:
+                        status = "Questing on " + DBSSobject.cooldown_descriptor;
+                        break;
+                    case 2:
+                        status = "PTP: Attacking";
+                        break;
+                    case 3:
+                        return "Questing on a challenge";
+                        break;
+                    case 4:
+                        if (DBSSobject.batch_type == 1) {
+                            status = "In Adventure Party: Adventuring";
+                        }
+                        else {
+                            status = "Adventuring";
+                        }
+                        break;
+                    case 5:
+                        status = "PTP: Patroling";
+                        break;
+                    case 6:
+                        status = "Garrisoned in " + garrisonLocation + ": Idle";
+                        break;
+                    case 7:
+                        status = "Garrisoned in " + garrisonLocation + ": Attacking";
+                        break;
+                    case 8:
+                        status = "Replacing dead SS";
+                        break;
+                    case 9:
+                        status = "World event";
+                        break;
+                    case 10:
+                        status = "Tales";
+                        break;
+                    default:
+                        status = "Unknown " + DBSSobject.cooldown_type;
+                        break;
+                }
+            }
+            else {
+                if (garrisonLocation != "") {
+                    status = "Garrisoned in " + garrisonLocation + ": Idle";
+                }
+                else {
+                    if (DBSSobject.batch_type == 1) {
+                        status = "In Adventure Party: Idle";
+                    }
+                    else {
+                        status = "Idle";
+                    }
+                }
+            }
+
+            return status;
+        }
+
+        //Returns the summed silver value of all the unequipped and nonperm items held
+        //Does not include SS exile values
+        function getUnequippedSilverTotal() {
+            var sum = 0;
+
+            $.each(characterInventory.weapons, function (i, item) {
+                if (item.permanent == false && (item.quantity > item.equippedQuantity))
+                    sum += item.saleValue * Number(item.quantity - item.equippedQuantity);
+            });
+            $.each(characterInventory.armor, function (i, item) {
+                if (item.permanent == false && (item.quantity > item.equippedQuantity))
+                    sum += item.saleValue * Number(item.quantity - item.equippedQuantity);
+            });
+            $.each(characterInventory.units, function (i, item) {
+                if (item.permanent == false && (item.quantity > item.equippedQuantity))
+                    sum += item.saleValue * Number(item.quantity - item.equippedQuantity);
+            });
+            $.each(characterInventory.resources, function (i, item) {
+                if (item.permanent == false)
+                    sum += item.saleValue * item.quantity;
+            });
+            $.each(characterInventory.boons, function (i, item) {
+                if (item.permanent == false)
+                    sum += item.saleValue * item.quantity;
+            });
+
+            sum = Math.floor(sum);
+
+            return sum;
+        }
+
+        //Reset the current garrison fields
+        function resetGarrisonCounts() {
+            for (var i = 0; i < characterInventory.regions.length; i++) {
+                for (var j = 0; j < characterInventory.regions[i].subregions.length; j++) {
+                    characterInventory.regions[i].subregions[j].garrisonCount = 0;
+                }
+            }
+        }
+
+        //Fills the current garrison fields
+        function fillGarrisonCounts() {
+            resetGarrisonCounts();
+
+            $.each(characterInventory.swornSwords, function (i, SS) {
+                if (SS.garrisonRegionId > -1 && SS.garrisonSubregionId > -1) {
+                    if (SS.wounds < 5)
+                        characterInventory.regions[SS.garrisonRegionId].subregions[SS.garrisonSubregionId].garrisonCount++;
+                }
+            });
+        }
+
+        //Resets the camp material counts
+        function resetCampMaterials() {
+			//characterInventory.campMaterials.silverCount = 0;
+		    //characterInventory.campMaterials.prestigeCount = 0;
+            $.each(characterInventory.campMaterials.battle, function (i, item) {
+                item.quantity = 0;
+            });
+         // $.each(characterInventory.campMaterials.trade, function (i, item) {
+         //       item.quantity = 0;
+          //  });
+        //    $.each(characterInventory.campMaterials.intrigue, function (i, item) {
+        //        item.quantity = 0;
+        //    });
+        }
+
+        //Fills the camp material counts
+        function fillCampMaterials() {
+            resetCampMaterials();
+			
+            $.each(characterInventory.weapons, function (i, item) {
+                updateCampMaterialCount(item);
+            });
+            $.each(characterInventory.armor, function (i, item) {
+                updateCampMaterialCount(item);
+            });
+            $.each(characterInventory.units, function (i, item) {
+                updateCampMaterialCount(item);
+            });
+            $.each(characterInventory.resources, function (i, item) {
+                updateCampMaterialCount(item);
+            });
+        }
+
+        //Updates the camp material counts for the given item
+        function updateCampMaterialCount(item) {
+            $.each(characterInventory.campMaterials.battle, function (i, campArray) {
+                if (campArray.id != 0 && item.archetypeId == campArray.id
+                        && item.quantity > 0 && item.permanent == false) {
+                    campArray.quantity = campArray.quantity + item.quantity;
+                }
+            });
+      //      $.each(characterInventory.campMaterials.trade, function (i, campArray) {
+      //          if (campArray.id != 0 && item.archetypeId == campArray.id
+        //            && item.quantity > 0 && item.permanent == false) {
+       //             campArray.quantity = campArray.quantity + item.quantity;
+        //        }
+      //     });
+        //    $.each(characterInventory.campMaterials.intrigue, function (i, campArray) {
+        //        if (campArray.id != 0 && item.archetypeId == campArray.id
+      //                  && item.quantity > 0 && item.permanent == false) {
+       //             campArray.quantity = campArray.quantity + item.quantity;
+       //         }
+         //   });
+        }
+
+        //Fill dropdowns for Detail filtering panel
+        function fillDetailFilterPanel() {
+            fillDetailFilterDropdown($('#ddlDetailFilter1'));
+            fillDetailFilterDropdown($('#ddlDetailFilter2'));
+        }
+
+        //Fills the given jquery dropdown with detail filtering options
+        function fillDetailFilterDropdown(dropdown) {
+            dropdown.append(new Option("None", "NONE"));
+            dropdown.append(new Option("Battle", "BATTLE"));
+            dropdown.append(new Option("Trade", "TRADE"));
+            dropdown.append(new Option("Intrigue", "INTRIGUE"));
+            dropdown.append(new Option("Fight", "FIGHT"));
+            dropdown.append(new Option("Harass", "HARASS"));
+            dropdown.append(new Option("Aid", "AID"));
+            dropdown.append(new Option("Barter", "BARTER"));
+            dropdown.append(new Option("Bribe", "BRIBE"));
+            dropdown.append(new Option("Swindle", "SWINDLE"));
+            dropdown.append(new Option("Spy", "SPY"));
+            dropdown.append(new Option("Steal", "STEAL"));
+            dropdown.append(new Option("Sabotage", "SABOTAGE"));
+            dropdown.append(new Option("Attack", "ATTACK"));
+            dropdown.append(new Option("Defense", "DEFENSE"));
+            dropdown.append(new Option("Speed", "SPEED"));
+            dropdown.append(new Option("Wounds", "WOUNDS"));
+            dropdown.append(new Option("AvA", "AVA"));
+            dropdown.append(new Option("PtP", "PTP"));
+            dropdown.append(new Option("Quests", "QUESTS"));
+            dropdown.append(new Option("Adventures", "ADVENTURES"));
+            dropdown.append(new Option("Experience", "EXPERIENCE"));
+            dropdown.append(new Option("Silver", "SILVER"));
+            dropdown.append(new Option("Tales", "TALES"));
+        }
+
+        //Gets the keywords related to the given dropdown value
+        function getKeyWordsFromSelectionValue(value) {
+            var keywords = [];
+            
+            switch (value) {
+                case "NONE":
+                    break;
+                case "BATTLE":
+                    keywords.push("battle");
+                    break;
+                case "TRADE":
+                    keywords.push("trade");
+                    break;
+                case "INTRIGUE":
+                    keywords.push("intrigue");
+                    break;
+                case "FIGHT":
+                    keywords.push("fight");
+                    break;
+                case "HARASS":
+                    keywords.push("harass");
+                    break;
+                case "AID":
+                    keywords.push("aid");
+                    break;
+                case "BARTER":
+                    keywords.push("barter");
+                    break;
+                case "BRIBE":
+                    keywords.push("bribe");
+                    break;
+                case "SWINDLE":
+                    keywords.push("swindle");
+                    break;
+                case "SPY":
+                    keywords.push("spy");
+                    break;
+                case "STEAL":
+                    keywords.push("steal");
+                    break;
+                case "SABOTAGE":
+                    keywords.push("sabotage");
+                    break;
+                case "ATTACK":
+                    keywords.push("attack");        //attack, attacks, attacking
+                    break;
+                case "DEFENSE":
+                    keywords.push("defense");       //defense, defenses
+                    keywords.push("defence");       //defence, defences
+                    keywords.push("defending");
+                    break;
+                case "SPEED":
+                    keywords.push("speed");
+                    keywords.push("fast");          //fast, faster
+                    keywords.push("completion");    
+                    keywords.push("complete");      
+                    break;
+                case "WOUNDS":
+                    keywords.push("wound");         //wound, wounds, wounding
+                    break;
+                case "AVA":
+                    keywords.push("ava");
+                    keywords.push("alliance vs alliance");
+                    break;
+                case "PTP":
+                    keywords.push("ptp");
+                    keywords.push("player-to-player");
+                    keywords.push("player to player");
+                    break;
+                case "QUESTS":
+                    keywords.push("quest");         //quest, quests, questing
+                    break;
+                case "ADVENTURES":
+                    keywords.push("adventure");     //adventure, adventures
+                    keywords.push("adventuring");
+                    break;
+                case "EXPERIENCE":
+                    keywords.push("experience");
+                    break;
+                case "SILVER":
+                    keywords.push("silver");
+                    break;
+                case "TALES":
+                    keywords.push("tale");          //tale, tales
+                    break;
+                default:
+                    break;
+            }
+
+            return keywords;
+        }
+
+        //Fills the filtered lists based on the detail filter criteria
+        function filterListsByDetails() {
+            var lists = [];
+            var keywords1 = [];
+            var keywords2 = [];
+            var output = [];
+
+            keywords1 = getKeyWordsFromSelectionValue($('#ddlDetailFilter1').val());
+            keywords2 = getKeyWordsFromSelectionValue($('#ddlDetailFilter2').val());
+
+            lists.push({ input: characterInventory.swornSwords, type: "SwornSwords" });
+            lists.push({ input: characterInventory.weapons, type: "Weapons" });
+            lists.push({ input: characterInventory.armor, type: "Armor" });
+            lists.push({ input: characterInventory.units, type: "Units" });
+            lists.push({ input: characterInventory.seals, type: "Seals" });
+            lists.push({ input: characterInventory.resources, type: "Resources" });
+            lists.push({ input: characterInventory.boons, type: "Boons" });
+            
+            $.each(lists, function (i, list) {
+                if ($('#ddlDetailFilter1').val() == "NONE" && $('#ddlDetailFilter2').val() == "NONE") {
+                    //set filtered lists to base
+                    output = list.input;
+                }
+                else if ($('#ddlDetailFilter1').val() != "NONE" && $('#ddlDetailFilter2').val() == "NONE") {
+                    //filter by first dropdown
+                    output = filterListByKeywords(list.input, keywords1);
+                }
+                else if ($('#ddlDetailFilter1').val() == "NONE" && $('#ddlDetailFilter2').val() != "NONE") {
+                    //filter by second dropdown
+                    output = filterListByKeywords(list.input, keywords2);
+                }
+                else {
+                    //filter by both
+                    if ($('#ddlDetailFilterAndOr').val() == "AND") {
+                        output = filterListByKeywords(list.input, keywords1);
+                        output = filterListByKeywords(output, keywords2);
+                    }
+                    else {  //OR
+                        keywords1 = keywords1.concat(keywords2);
+                        output = filterListByKeywords(list.input, keywords1);
+                    }
+                }
+
+                switch (list.type) {
+                    case "SwornSwords":
+                        characterInventory.filteredSwornSwords = output;
+                        break;
+                    case "Weapons":
+                        characterInventory.filteredWeapons = output;
+                        break;
+                    case "Armor":
+                        characterInventory.filteredArmor = output;
+                        break;
+                    case "Units":
+                        characterInventory.filteredUnits = output;
+                        break;
+                    case "Seals":
+                        characterInventory.filteredSeals = output;
+                        break;
+                    case "Resources":
+                        characterInventory.filteredResources = output;
+                        break;
+                    case "Boons":
+                        characterInventory.filteredBoons = output;
+                        break;
+                }
+            });
+
+            //Update the tables
+            createInventoryTables();
+            $('#divFilterSummary').html(buildFilterSummary());
+        }
+
+        //Create the bloat tables
+        //Removed the sorting since it's less useful and adds the most time
+        function createBloatTables() {
+            $('#divBloatRemovalCandidatesTable').html(buildBloatRemovalCandidatesTable('tblBloatRemovalCandidates', characterInventory.bloatRemovalCandidates));
+            $('#tblBloatRemovalCandidates').tablesorter();
+            $('#divBloatReplacementsTable').html(buildBloatReplacementsTable('tblBloatReplacements', characterInventory.bloatReplacements));
+            $('#tblBloatReplacements').tablesorter();
+        }
+
+        //Create the tablesorter SS Status table
+        function createStatusTable() {
+            $('#divSwornSwordStatusTable').html(buildSwornSwordStatusTable('tblSwornSwordStatus', characterInventory.swornSwords));
+            $('#tblSwornSwordStatus').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+        }
+
+        //Create the tablesorter tables to display SS and inventory contents
+        function createInventoryTables() {
+            $('#divSwornSwordDetailTable').html(buildSwornSwordDetailTable('tblSwornSwordDetails', characterInventory.filteredSwornSwords));
+            $('#tblSwornSwordDetails').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#divWeaponTable').html(buildEquipmentTable('tblWeapons', characterInventory.filteredWeapons));
+            $('#tblWeapons').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#divArmorTable').html(buildEquipmentTable('tblArmor', characterInventory.filteredArmor));
+            $('#tblArmor').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#divUnitTable').html(buildEquipmentTable('tblUnits', characterInventory.filteredUnits));
+            $('#tblUnits').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#divSealTable').html(buildSealTable('tblSeals', characterInventory.filteredSeals));
+            $('#tblSeals').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#divBoonTable').html(buildBoonTable('tblBoons', characterInventory.filteredBoons));
+            //$('#tblBoons').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#tblBoons').tablesorter();
+            $('#divResourceTable').html(buildResourceTable('tblResources', characterInventory.filteredResources));
+            //$('#tblResources').tablesorter({ widthFixed: true, widgets: ["filter"], widgetOptions: { filter_columnFilters: true, filter_ignoreCase: true} });
+            $('#tblResources').tablesorter();
+
+            if ($("#chkShowItemIds").is(':checked'))
+                $(".itemIdColumn").show();
+            else
+                $(".itemIdColumn").hide();
+        }
+
+        //Filters the given item list to entries with details containing one or more of the keywords
+        function filterListByKeywords(items, keywords) {
+            var results = [];
+            var breakFlag = false;
+
+            for (var i = 0; i < items.length; i++) {
+                breakFlag = false;
+
+                for (var j = 0; j < keywords.length; j++) {
+                    if (breakFlag)
+                        break;
+
+                    for (var k = 0; k < items[i].details.length; k++) {
+                        if (items[i].details[k].toLowerCase().match(keywords[j])) {
+                            results.push(items[i]);
+
+                            breakFlag = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        //Creates a table for SS owned by specialty
+        function buildSSSpecialtiesTable() {
+            var output = "";
+            var fightSum = 0;
+            var harassSum = 0;
+            var aidSum = 0;
+            var barterSum = 0;
+            var swindleSum = 0;
+            var bribeSum = 0;
+            var spySum = 0;
+            var sabotageSum = 0;
+            var stealSum = 0;
+            var untrainedSum = 0;
+
+            $.each(characterInventory.swornSwords, function (i, swornSword) {
+                switch (swornSword.specialty.toLowerCase()) {
+                    case "fight":
+                        fightSum++;
+                        break;
+                    case "harass":
+                        harassSum++;
+                        break;
+                    case "aid":
+                        aidSum++;
+                        break;
+                    case "barter":
+                        barterSum++;
+                        break;
+                    case "hoodwink":
+                        swindleSum++;
+                        break;
+                    case "bribe":
+                        bribeSum++;
+                        break;
+                    case "spy":
+                        spySum++;
+                        break;
+                    case "sabotage":
+                        sabotageSum++;
+                        break;
+                    case "steal":
+                        stealSum++;
+                        break;
+                    default:
+                        untrainedSum++;
+                        break;
+                }
+            });
+
+            output = '<table><tr><th>Fight</th><th>Harass</th><th>Aid</th></tr><tr><td>' +
+                fightSum + '</td><td>' + harassSum + '</td><td>' + aidSum +
+                '</td></tr><tr><th>Barter</th><th>Swindle</th><th>Bribe</th></tr><tr><td>' +
+                barterSum + '</td><td>' + swindleSum + '</td><td>' + bribeSum +
+                '</td></tr><tr><th>Spy</th><th>Sabotage</th><th>Steal</th></tr><tr><td>' +
+                spySum + '</td><td>' + sabotageSum + '</td><td>' + stealSum + '</td></tr>' +
+                '<tr><th>Untrained</th></tr><tr><td>' + untrainedSum + '</td></tr></table>';
+
+            return output;
+        }
+
+        //Creates a table for SS owned by rarity
+        function buildSSRaritiesTable() {
+            var output = "";
+            var peerlessSum = 0;
+            var legendarySum = 0;
+            var rareSum = 0;
+            var uncommonSum = 0;
+            var commonSum = 0;
+
+            $.each(characterInventory.swornSwords, function (i, swornSword) {
+                switch (swornSword.rarity) {
+                    case 1:
+                        commonSum++;
+                        break;
+                    case 2:
+                        uncommonSum++;
+                        break;
+                    case 3:
+                        rareSum++;
+                        break;
+                    case 4:
+                        legendarySum++;
+                        break;
+                    case 5:
+                        peerlessSum++;
+                        break;
+                }
+            });
+
+            output = '<table><tr><th>Peerless</th><td>' + peerlessSum + '</td></tr>' +
+                      '<th>Legendary</th><td>' + legendarySum + '</td></tr>' +
+                      '<th>Rare</th><td>' + rareSum + '</td></tr>' +
+                      '<th>Uncommon</th><td>' + uncommonSum + '</td></tr>' +
+                      '<th>Common</th><td>' + commonSum + '</td></tr></table>';
+
+            return output;
+        }
+
+        //TODO: Wasn't as consistent as I should have been on unassigned IDs, for now replacing undefined and -1 with "" for table output
+        function getIdString(id) {
+            if (typeof id == 'undefined' || id == -1)
+                return "";
+            else
+                return id;
+        }
+
+        //Gets the rarity display string
+        function getRarityString(rarity) {
+            if ($("#chkShowNumericalRarity").is(':checked')) {
+                return rarity;
+            }
+            
+            switch (rarity) {
+                case 5:
+                    return "Peerless";
+                case 4:
+                    return "Legendary";
+                case 3:
+                    return "Rare";
+                case 2:
+                    return "Uncommon";
+                case 1:
+                    return "Common";
+                default:
+                    return rarity;
+            }
+        }
+
+        //Get Details display string
+        function getDetailString(item) {
+            var output = "";
+            
+            output = item.details.join(', \n');
+
+            return output;
+        }
+
+        //Get Seals display string
+        function getSealString(item) {
+            var output = "";
+
+            output = "Used:" + item.sealSlotsUsed + "/" + item.sealSlotsMax + " \nUnlocked:" + item.sealSlotsUnlocked + "/" + item.sealSlotsMax;
+
+            return output;
+        }
+
+        //create the filter summary
+        function buildFilterSummary() {
+            var output = "<b>Currently Showing:</b><br/>" + characterInventory.filteredSwornSwords.length + "/" + characterInventory.swornSwords.length + " Sworn Swords<br/>"
+                        + characterInventory.filteredWeapons.length + "/" + characterInventory.weapons.length + " Weapons<br/>"
+                        + characterInventory.filteredArmor.length + "/" + characterInventory.armor.length + " Armor<br/>"
+                        + characterInventory.filteredUnits.length + "/" + characterInventory.units.length + " Units<br/>"
+                        + characterInventory.filteredSeals.length + "/" + characterInventory.seals.length + " Seals<br/>";
+
+            return output;
+        }
+
+        //Creates a table for displaying the garrison summary
+        function buildGarrisonSummaryTable(id, regions) {
+            var output = '<table id="' + id +'"><thead><tr><th>Region</th><th>Subregion</th><th>Garrison</th><th>Max Garrison</th></tr></thead><tbody>';
+            var sum = 0;
+            var maxSum = 0;
+            var maxString = "";
+
+            for (var i = 0; i < regions.length; i++) {
+                for (var j = 0; j < regions[i].subregions.length; j++) {
+                    sum += regions[i].subregions[j].garrisonCount;
+                    maxSum += regions[i].subregions[j].maxGarrisonCount;
+
+                    if (regions[i].subregions[j].maxGarrisonCount > 0)
+                        maxString = regions[i].subregions[j].maxGarrisonCount;
+                    else
+                        maxString = "";
+
+                    if (regions[i].subregions[j].upgrading == true)
+                        maxString += " +";
+
+                    output += '<tr><td>' +
+                            regions[i].name + '</td><td>' +
+                            regions[i].subregions[j].name + '</td><td>' +
+                            regions[i].subregions[j].garrisonCount + '</td><td>' +
+                            maxString + '</td></tr>';
+                }
+            }
+
+            if (maxSum == 0)
+                maxSum = "";
+
+            output += '<tr><td colspan="2" align="right"><b> Total Garrisoned:</b></td><td><b>' + sum + '</b></td><td><b>' + maxSum + '</b></td></tr>';
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied Equipment list
+        function buildEquipmentTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Page</th><th>Name</th><th>Battle</th><th>Trade</th><th>Intrigue</th><th>Details</th><th>Seals</th><th>Rarity</th><th>Quantity</th><th>Equipped On</th><th>Perm</th><th>Sell Page</th><th>Unequipped Sale Value</th>' +
+                '<th class="itemIdColumn filter-false">Item ID</th><th class="itemIdColumn filter-false">SwornSword ID</th></tr></thead><tbody>';
+            var unequippedSaleValue = 0;
+            var equippedOnString = "";
+            var swornSword;
+
+            for (var i = 0; i < array.length; i++) {
+                if (array[i].permanent == false)
+                    unequippedSaleValue = Math.floor((array[i].quantity - array[i].equippedQuantity) * array[i].saleValue);
+                else
+                    unequippedSaleValue = 0;
+
+                if (array[i].equippedOnId != -1) {
+                    swornSword = getItemById(characterInventory.swornSwords, array[i].equippedOnId);
+
+                    if (typeof swornSword == 'undefined')
+                        equippedOnString = "Character";
+                    else
+                        equippedOnString = swornSword.name;
+                }
+                else if (array[i].equippedQuantity > 1)
+                    equippedOnString = array[i].equippedQuantity + " Swords";
+                else
+                    equippedOnString = "";
+
+                output += '<tr><td>' +
+                        array[i].page + '</td><td>' +
+                        array[i].name + '</td><td>' +
+                        array[i].battle + '</td><td>' +
+                        array[i].trade + '</td><td>' +
+                        array[i].intrigue + '</td><td style="white-space:pre">' +
+                        getDetailString(array[i]) + '</td><td style="white-space:pre">' +
+                        getSealString(array[i]) + '</td><td data-text="' + array[i].rarity + '">' +
+                        getRarityString(array[i].rarity) + '</td><td>' +
+                        array[i].quantity + '</td><td>' +
+                        equippedOnString + '</td><td>' +
+                        array[i].permanent + '</td><td>' +
+                        array[i].salePage + '</td><td>' +
+                        unequippedSaleValue + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].id) + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].equippedOnId) + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied SwornSword list details
+        function buildSwornSwordDetailTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Page</th><th>Name</th><th>Specialty</th><th>Level</th><th>Battle</th><th>Trade</th><th>Intrigue</th><th>Details</th><th>Weapon</th><th>Armor</th><th>Unit</th><th>Seals</th><th>Rarity</th><th>Perm</th><th>Sell Page</th>' +
+                '<th class="itemIdColumn filter-false">Sworn Sword ID</th><th class="itemIdColumn filter-false">Weapon ID</th><th class="itemIdColumn filter-false">Armor ID</th><th class="itemIdColumn filter-false">Unit ID</th></tr></thead><tbody>';
+            var weaponString = "";
+            var armorString = "";
+            var unitString = "";
+            var item;
+
+            for (var i = 0; i < array.length; i++) {
+                item =  getItemById(characterInventory.weapons, array[i].weaponId);
+                if (typeof item != 'undefined')
+                    weaponString = item.name;
+                else
+                    weaponString = "";
+
+                item = getItemById(characterInventory.armor, array[i].armorId);
+                if (typeof item != 'undefined')
+                    armorString = item.name;
+                else
+                    armorString = "";
+
+                item = getItemById(characterInventory.units, array[i].unitId);
+                if (typeof item != 'undefined')
+                    unitString = item.name;
+                else
+                    unitString = "";
+
+                output += '<tr><td>' +
+                        array[i].page + '</td><td>' +
+                        array[i].name + '</td><td>' +
+                        array[i].specialty + '</td><td>' +
+                        array[i].level + '</td><td>' +
+                        array[i].battle + '</td><td>' +
+                        array[i].trade + '</td><td>' +
+                        array[i].intrigue + '</td><td style="white-space:pre">' +
+                        getDetailString(array[i]) + '</td><td>' +
+                        weaponString + '</td><td>' +
+                        armorString + '</td><td>' +
+                        unitString + '</td><td style="white-space:pre">' +
+			            getSealString(array[i]) + '</td><td data-text="' + array[i].rarity + '">' +
+                        getRarityString(array[i].rarity) + '</td><td>' +
+                        array[i].permanent + '</td><td>' +
+                        array[i].salePage + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].id) + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].weaponId) + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].armorId) + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].unitId) + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied SwornSword status list
+        function buildSwornSwordStatusTable(id, array) {
+            var output = '<table id="' + id + '" style="white-space: nowrap;"><thead><tr><th>Page</th><th>Name</th><th>Specialty</th><th>Level</th><th>Rarity</th><th>Wounds</th><th>Status</th><th>Cooldown</th></tr></thead><tbody>';
+            var cooldown = 0;
+            var cooldownString = "";
+            var tr = "";
+
+            for (var i = 0; i < array.length; i++) {
+                if (array[i].cooldown > 0 && array[i].cooldown < 3600) {
+                    cooldown = Math.round(array[i].cooldown / 60 * 10) / 10;
+                    cooldownString = cooldown + " min";
+                }
+                else if (array[i].cooldown > 0) {
+                    cooldown = Math.round(array[i].cooldown / 3600 * 10) / 10;
+                    cooldownString = cooldown + " hours";
+                }
+                else {
+                    cooldownString = "";
+                }
+
+                if (array[i].wounds > 4) {
+                    tr = "<tr style='background-color: #CC0000;'>";
+                }
+                else if (array[i].wounds > 3) {
+                    tr = "<tr style='background-color: #FFAA00;'>";
+                }
+                else if (array[i].wounds > 2) {
+                    tr = "<tr style='background-color: #FFFF66;'>";
+                }
+                else
+                    tr = "<tr>";
+
+                output += tr + '<td>' +
+                        array[i].page + '</td><td>' +
+                        array[i].name + '</td><td>' +
+                        array[i].specialty + '</td><td>' +
+                        array[i].level + '</td><td data-text="' + array[i].rarity + '">' +
+                        getRarityString(array[i].rarity) + '</td><td>' +
+                        array[i].wounds + '</td><td style="white-space: nowrap;">' +
+                        array[i].status + '</td><td>' +
+                        cooldownString + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied seal list
+        function buildSealTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Page</th><th>Name</th><th>Battle</th><th>Trade</th><th>Intrigue</th><th>Details</th><th>Rarity</th><th>Quantity</th><th>Sell Page</th><th class="itemIdColumn filter-false">Item ID</th></tr></thead><tbody>';
+
+            for (var i = 0; i < array.length; i++) {
+                output += '<tr><td>' +
+                        array[i].page + '</td><td>' +
+                        array[i].name + '</td><td>' +
+                        array[i].battle + '</td><td>' +
+                        array[i].trade + '</td><td>' +
+                        array[i].intrigue + '</td><td style="white-space:pre">' +
+                        getDetailString(array[i]) + '</td><td data-text="' + array[i].rarity + '">' +
+                        getRarityString(array[i].rarity) + '</td><td>' +
+                        array[i].quantity + '</td><td>' +
+                        array[i].salePage + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].id) + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied boon list
+        function buildBoonTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Page</th><th>Name</th><th>Battle</th><th>Trade</th><th>Intrigue</th><th>Details</th><th>Rarity</th><th>Quantity</th><th>Sell Page</th><th>Sale Value</th><th class="itemIdColumn filter-false">Item ID</th></tr></thead><tbody>';
+            var saleValue = 0;
+
+            for (var i = 0; i < array.length; i++) {
+                saleValue = Number(array[i].quantity) * array[i].saleValue;
+
+                output += '<tr><td>' +
+                        array[i].page + '</td><td>' +
+                        array[i].name + '</td><td>' +
+                        array[i].battle + '</td><td>' +
+                        array[i].trade + '</td><td>' +
+                        array[i].intrigue + '</td><td style="white-space:pre">' +
+                        getDetailString(array[i]) + '</td><td data-text="' + array[i].rarity + '">' +
+                        getRarityString(array[i].rarity) + '</td><td>' +
+                        array[i].quantity + '</td><td>' +
+                        array[i].salePage + '</td><td>' +
+                        saleValue + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].id) + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied resource list
+        function buildResourceTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Page</th><th>Name</th><th>Details</th><th>Rarity</th><th>Quantity</th><th>Sell Page</th><th>Sale Value</th><th class="itemIdColumn filter-false">Item ID</th></tr></thead><tbody>';
+            var saleValue = 0;
+
+            for (var i = 0; i < array.length; i++) {
+                saleValue = Number(array[i].quantity) * array[i].saleValue;
+
+                output += '<tr><td>' +
+                        array[i].page + '</td><td>' +
+                        array[i].name + '</td><td style="white-space:pre">' +
+                        getDetailString(array[i]) + '</td><td data-text="' + array[i].rarity + '">' +
+                        getRarityString(array[i].rarity) + '</td><td>' +
+                        array[i].quantity + '</td><td>' +
+                        array[i].salePage + '</td><td>' +
+                        saleValue + '</td><td class="itemIdColumn">' +
+                        getIdString(array[i].id) + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //To allow copying just a column of numbers for pasting in to the camp mat tracking sheet, 
+        //the camp material tables are split in to halves and the quantity list is its own table.
+
+        //Creates a table for displaying the camp material label list
+        function buildCampMaterialLabelTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Name</th></tr></thead><tbody>';
+			 output += '<tr><td> Silver </td></tr>';
+			  output += '<tr><td> Prestige</td></tr>';
+            for (var i = 0; i < array.battle.length; i++) {
+                output += '<tr><td>' + array.battle[i].name + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the camp material qantity list
+        function buildCampMaterialQuantityTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Quantity</th></tr></thead><tbody>';
+			output += '<tr><td>' + array.silverCount + '</td></tr>';
+			output += '<tr><td>' + array.prestigeCount + '</td></tr>';
+            for (var i = 0; i < array.battle.length; i++) {
+                output += '<tr><td>' + array.battle[i].quantity + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied bloat replacement list
+        function buildBloatReplacementsTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Archetype ID</th><th>Archetype Name</th><th>Quantity</th></tr></thead><tbody>';
+
+            for (var i = 0; i < array.length; i++) {
+
+                output += '<tr><td>' +
+                        array[i].archetypeId + '</td><td>' +
+                        array[i].archetypeName + '</td><td>' +
+                        array[i].quantity + '</td></tr>';
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+
+        //Creates a table for displaying the supplied bloat candidate list
+        function buildBloatRemovalCandidatesTable(id, array) {
+            var output = '<table id="' + id + '"><thead><tr><th>Item ID</th><th>Name</th><th>Archetype ID</th><th>Archetype Name</th><th>Quantity</th><th>Equipped Quantity</th><th>Rarity</th></tr></thead><tbody>';
+            var item;
+            var td;
+
+            for (var i = 0; i < array.length; i++) {
+                for (var j = 0; j < array[i].items.length; j++) {
+                    item = array[i].items[j];
+
+                    if (item.equippedQuantity > 0)
+                        td = "<td style='background-color: #FFFF66;'>";
+                    else
+                        td = "<td>";
+
+
+                    output += '<tr><td>' +
+                        item.id + '</td><td>' +
+                        item.name + '</td><td>' +
+                        array[i].archetypeId + '</td><td>' +
+                        array[i].archetypeName + '</td><td>' +
+                        item.quantity + '</td>' + td +
+                        item.equippedQuantity + '</td><td data-text="' + item.rarity + '">' +
+                        getRarityString(item.rarity) + '</td></tr>';
+                }
+            }
+
+            output += '</tbody></table>';
+
+            return output;
+        }
+    </script>
+</body>
+</html>
